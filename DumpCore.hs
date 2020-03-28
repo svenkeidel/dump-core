@@ -2,31 +2,30 @@
 {-# LANGUAGE CPP #-}
 module DumpCore(plugin) where
 
-import GhcPlugins hiding (TB)
-import Unique(unpkUnique)
-import Demand
-import Outputable
-import CoreStats
-import CoreMonad(getHscEnv)
-import HscTypes(CgGuts(..))
-
+import           GhcPlugins hiding (TB)
+import           Unique (unpkUnique)
+import           Demand
+import           Outputable
+import           CoreStats
+import           CoreMonad (getHscEnv)
+import           HscTypes (CgGuts(..))
 
 import qualified Data.Aeson as JS
 import qualified Data.Aeson.Types as JS
 import           Data.Aeson ((.=), ToJSON(toJSON))
-import           Data.Text(Text)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Maybe(mapMaybe)
+import           Data.Maybe (mapMaybe)
 import           MonadLib
 import           Data.Map ( Map )
 import qualified Data.Map as Map
-import           Control.Monad(unless)
+import           Control.Monad (unless)
 import           System.FilePath
 import           System.Directory
 
-import Paths_dump_core
+import           Paths_dump_core
 
 plugin :: Plugin
 plugin = defaultPlugin { installCoreToDos = install }
@@ -381,16 +380,12 @@ instance ToJSON AltCon where
 instance ToJSON Literal where
   toJSON lit =
     case lit of
-      MachChar c -> mk "char" (show c)
-      MachStr bs -> mk "string" (show bs)
-      MachNullAddr -> mk "null" ""
-#if __GLASGOW_HASKELL__ < 806
-      MachInt i -> mk "int" (show i)
-      MachInt64 i -> mk "int64" (show i)
-      MachWord i -> mk "word" (show i)
-      MachWord64 i -> mk "word64" (show i)
-      LitInteger i _t -> mk "integer" (show i)
-#else
+      LitChar c -> mk "char" (show c)
+      LitString bs -> mk "string" (show bs)
+      LitNullAddr -> mk "null" ""
+      LitFloat r -> mk "float" (show r)
+      LitDouble r -> mk "double" (show r)
+      LitLabel fs _ _ -> mk "label" (show fs)
       LitNumber num_type i _t ->
         case num_type of
           LitNumInteger -> mk "integer" (show i)
@@ -398,11 +393,7 @@ instance ToJSON Literal where
           LitNumInt -> mk "int" (show i)
           LitNumInt64 -> mk "int64" (show i)
           LitNumWord -> mk "word" (show i)
-#endif
-      MachFloat r -> mk "float" (show r)
-      MachDouble r -> mk "double" (show r)
-      MachLabel fs _ _ -> mk "label" (show fs)
-
+      LitRubbish -> mk "rubbish" "rubbish"
     where
     mk :: Text -> String -> JS.Value
     mk x s = JS.object [ "lit" .= s, "type" .= x ]
